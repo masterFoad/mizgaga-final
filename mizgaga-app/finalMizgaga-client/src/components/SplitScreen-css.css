@@ -1,0 +1,26 @@
+html {
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+body { margin: 0; }
+.outer {
+}
+.frame {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+.frame>* {
+    flex: 1 1 50%;
+}
+#editor {
+    font-family: monospace;
+    padding: .5em;
+    background: #444;
+    color: white;
+}
+canvas {
+    width: 100% !important;
+}
