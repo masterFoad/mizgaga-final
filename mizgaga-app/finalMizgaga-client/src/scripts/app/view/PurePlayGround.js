@@ -127,11 +127,23 @@ export class ModelRotator {
             }
         }
 
-        const currentRotationEulerAngles = new THREE.Euler();
-        currentRotationEulerAngles.setFromQuaternion(quaternion.normalize());
-        currentRotationEulerAngles.z = -currentRotationEulerAngles.z;
-        model.setRotationFromEuler(currentRotationEulerAngles);
-        // model.quaternion.slerp(quaternion, 0.1);
+        // const currentRotationEulerAngles = new THREE.Euler();
+        // currentRotationEulerAngles.setFromQuaternion(quaternion.normalize(),"XYZ");
+        // currentRotationEulerAngles.x = currentRotationEulerAngles.x + Math.PI;
+        // currentRotationEulerAngles.y = currentRotationEulerAngles.y + Math.PI;
+        // currentRotationEulerAngles.z = currentRotationEulerAngles.z + Math.PI;
+        // if ((currentRotationEulerAngles.x - 113) < 0) {
+        //     currentRotationEulerAngles.z = -currentRotationEulerAngles.z; // reverse problematic angle
+        // }
+        // else {
+        //     currentRotationEulerAngles.y = -currentRotationEulerAngles.y; // reverse problematic angle
+        // }
+        // console.log(
+        //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" + currentRotationEulerAngles.y * 180
+        //     / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 / Math.PI + " - \n");
+        // model.setRotationFromEuler(currentRotationEulerAngles);
+        // quaternion.setFromEuler(currentRotationEulerAngles);
+        model.quaternion.slerp(quaternion, 0.1);
 
         return model;
     }
