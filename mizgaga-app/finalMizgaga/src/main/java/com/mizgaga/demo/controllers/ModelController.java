@@ -268,7 +268,11 @@ public class ModelController {
 
     private Matcher getBroadcastIp(Pattern getBroadcastAddress) throws IOException, InterruptedException {
         StringBuilder cmdOutput = new StringBuilder();
-        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, "ifconfig");
+        String cmd = "ifconfig";
+        if (PlatformUtil.isWindows()) {
+            cmd = "ipconfig";
+        }
+        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, cmd);
         return getBroadcastAddress.matcher(cmdOutput);
     }
 
