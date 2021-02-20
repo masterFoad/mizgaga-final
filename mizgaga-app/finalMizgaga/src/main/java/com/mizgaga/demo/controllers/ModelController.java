@@ -1,9 +1,24 @@
 package com.mizgaga.demo.controllers;
 
-import com.mizgaga.demo.common.Utils;
-import com.mizgaga.demo.db.SqlManager;
-import com.mizgaga.demo.pojos.SessionDataVector;
-import com.sun.javafx.PlatformUtil;
+import static com.mizgaga.demo.common.Utils.logInfo;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,24 +26,17 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static com.mizgaga.demo.common.Utils.logInfo;
+import com.mizgaga.demo.common.Utils;
+import com.mizgaga.demo.db.SqlManager;
+import com.mizgaga.demo.pojos.SessionDataVector;
+import com.sun.javafx.PlatformUtil;
 
 @CrossOrigin
 @Controller
@@ -39,18 +47,19 @@ public class ModelController {
     private static ConcurrentHashMap<String, SensorStatus> sensorStatus = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, String> sensorAddress = new ConcurrentHashMap<>();
 
+
     /**
      * if mac run this
      */
     Pattern getBroadcastAddress = Pattern.compile("broadcast (\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b)(?=\\) at " + sensorMacAddress + ")");
+    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)..at.3c.71.bf.29.3f.c9");
 
 
     /**
      * if windows run this
      */
     //    Pattern getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-    //    Pattern getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + sensorMacAddress);
+    //    Pattern getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
 
     public static String sensorMacAddress = "3c-71-bf-29-3f-c9";
 
