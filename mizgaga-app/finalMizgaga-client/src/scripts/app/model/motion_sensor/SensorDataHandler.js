@@ -65,7 +65,7 @@ export class SensorDataHandler {
             let tmp = JSON.parse(filteredString);
             if (tmp === "" || JSON.stringify(filteredString) === "{\"qw\":0,\"qx\":0,\"qy\":0,\"qz\":0}") {
                 this.toResetEventCount++;
-                if (this.toResetEventCount === 400) {
+                if (this.toResetEventCount === 400) { // every 25 ms -> meaning we will get 400 after 10 seconds.
                     this.toResetEventCount = 0;
                     try {
                         await fetch(
