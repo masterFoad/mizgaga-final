@@ -9,7 +9,7 @@ import CardHeader from "@material-ui/core/CardHeader";
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 
 const cardInfo = {
-    "info1": [{
+    "top": [{
         text: "Top:\n" +
             "The thickness of the vessels’ walls and the clay type were of great\n" +
             "technical importance: apart from preventing leakages, thick walls could\n" +
@@ -39,7 +39,7 @@ const cardInfo = {
             footer1: "Date: Twelfth–fourteenth centuries.",
             footer2: "well meaning and kindly."
         }],
-    "info2": [{
+    "bottom": [{
         text: "Bottom:\n" +
             "Archaeological excavations at major Muslim and Crusader sites in the\n" +
             "Middle East since the 1930s have recovered numerous spheroid vessels.\n" +
@@ -70,7 +70,7 @@ const cardInfo = {
             footer1: "Date: Twelfth–fourteenth centuries.",
             footer2: "well meaning and kindly."
         }],
-    "info3": [{
+    "front": [{
         text: "Front:\n" +
             " \n" +
             "Fragments of thirty sphero-conical vessels (‘Greek fire’ grenades) were discovered during the excavation in and around the Crusader citadel. The vessels are small, typically sphero-conical in shape, with a short neck and a small spout (height c. 12–13 cm, maximum diameter 9–10 cm). Since the walls of the vessels’ bodies are thick (>1 cm), they are relatively heavy for their size. Most are decorated, with incisions, imprinting, relief elements, glazing, painting or stylised Arabic calligraphy. Several have a short inscription mentioning a name or phrase.\n",
@@ -88,7 +88,7 @@ const cardInfo = {
             footer1: "Date: Twelfth–fourteenth centuries.",
             footer2: "well meaning and kindly."
         }],
-    "info4": [{
+    "back": [{
         text: "These vessels are made of dark to brownish-gray, hard-fired clay with molded and carved decoration, consisting of vertical narrow double grooves and scale patterns over the entire body. The neck (c. 3 cm wide) has an opening measuring c. 6 mm in diameter. There is a circumscribed ring at the shoulder. The necks of the vessels end with an orifice 0.4–0.7 cm in diameter, and the bore is conical in shape, similar to the mouth of a modern perfume bottle.",
         footer1: "Date: Twelfth–fourteenth centuries.",
         footer2: "well meaning and kindly."
@@ -121,10 +121,10 @@ class ModelData extends React.Component {
     constructor(props) {
         super(props);
         this.bucketCount = {
-            info1: 0,
-            info2: 0,
-            info3: 0,
-            info4: 0
+            top: 0,
+            bottom: 0,
+            front: 0,
+            back: 0
         };
 
         this.currentFace = 0;
@@ -162,10 +162,10 @@ class ModelData extends React.Component {
                         console.log(
                             this.getInfoByFace(newFace) + " " + this.bucketCount[this.getInfoByFace(newFace)]);
                         this.bucketCount = {
-                            info1: 0,
-                            info2: 0,
-                            info3: 0,
-                            info4: 0
+                            top: 0,
+                            bottom: 0,
+                            front: 0,
+                            back: 0
                         };
 
                         this.setState({
@@ -180,10 +180,10 @@ class ModelData extends React.Component {
                     }
                 } else {
                     this.bucketCount = {
-                        info1: 0,
-                        info2: 0,
-                        info3: 0,
-                        info4: 0
+                        top: 0,
+                        bottom: 0,
+                        front: 0,
+                        back: 0
                     };
                 }
             }
@@ -201,26 +201,26 @@ class ModelData extends React.Component {
     }
 
     getInfoByFace = (face) => {
-        if (face === 0 || face === 1) {
-            return "info1";
-        } else if (face === 2 || face === 3 || face === 4 || face === 5) {
-            return "info2";
-        } else if (face === 6 || face === 7 || face === 8 || face === 9) {
-            return "info3";
-        } else if (face === 11 || face === 12) {
-            return "info4";
+        if (face === 8 || face === 1) {
+            return "top";
+        } else if (face === 11 || face === 10) {
+            return "bottom";
+        } else if (face === 6 || face === 3) {
+            return "front";
+        } else if (face === 5) {
+            return "back";
         }
     };
 
     getLockInfo = (face) => {
-        if (face === 0 || face === 1) {
-            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get back side info";
-        } else if (face === 2 || face === 3 || face === 4 || face === 5) {
-            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get front side info";
-        } else if (face === 6 || face === 7 || face === 8 || face === 9) {
-            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get upper side info";
-        } else if (face === 11 || face === 12) {
+        if (face === 8 || face === 1) {
+            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get top side info";
+        } else if (face === 11 || face === 10) {
             return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get bottom side info";
+        } else if (face === 6 || face === 3) {
+            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get front side info";
+        } else if (face === 5) {
+            return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get back side info";
         }
     };
 
@@ -250,14 +250,14 @@ class ModelData extends React.Component {
     };
 
     getCurrentFaceInformation = (face, lang) => {
-        if (face === 0 || face === 1) {
-            return this.getCardByCurrentFace("info1", lang);
-        } else if (face === 2 || face === 3 || face === 4 || face === 5) {
-            return this.getCardByCurrentFace("info2", lang);
-        } else if (face === 6 || face === 7 || face === 8 || face === 9) {
-            return this.getCardByCurrentFace("info3", lang);
-        } else if (face === 11 || face === 12) {
-            return this.getCardByCurrentFace("info4", lang);
+        if (face === 8 || face === 1) {
+            return this.getCardByCurrentFace("top", lang);
+        } else if (face === 11 || face === 10) {
+            return this.getCardByCurrentFace("bottom", lang);
+        } else if (face === 6 || face === 3) {
+            return this.getCardByCurrentFace("front", lang);
+        } else if (face === 5) {
+            return this.getCardByCurrentFace("back", lang);
         }
     };
 
