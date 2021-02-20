@@ -1,9 +1,10 @@
+import {SensorDataHandler} from '../model/motion_sensor/SensorDataHandler';
 import eventHandlerInstance from '../../libs/EventHandler';
 import {Utils} from '../../common/Utils';
 
 import * as THREE from 'three';
 import OrbitControls from 'three-orbitcontrols';
-import {getMTL, getOBJ, getTextures} from '../../common/LoadersUtil';
+import {getOBJ, getTextures, getMTL} from '../../common/LoadersUtil';
 import {serverUrl} from "../../../common/server-const";
 import axios from 'axios';
 
@@ -20,7 +21,7 @@ export class ModelRotator {
         this.sessionStatus = "session_awaiting";
         this.prevSessionStatus = "session_awaiting";
         this.sensorAddress = sensorAddress;
-        this.sessionRefQuaternion = null;
+        this.prevQuaternion = null;
         this.countQuaternions = 0;
         this.sumQuaternions = 0;
         this.streamAvg = [];
@@ -81,8 +82,7 @@ export class ModelRotator {
 
     getFixedNumber(x) {
         // return Number(num.toFixed(5));
-        // return Math.floor(x * 1000) / 1000;
-        return x;
+        return Math.floor(x * 1000) / 1000;
     };
 
     percentageChangeCalculator(v1, v2) {
@@ -100,109 +100,68 @@ export class ModelRotator {
     rotateModel(model) {
         model.rotation.order = 'YXZ';
 
-        // let constant = new THREE.Quaternion( 0.5, 0.5, -0.5,  0.5);
-
         let quaternion = new THREE.Quaternion(this.getFixedNumber(this.read.qy),
-                                              -this.getFixedNumber(this.read.qx),
-                                              this.getFixedNumber(this.read.qz),
-                                              -this.getFixedNumber(this.read.qw));
+                                              this.getFixedNumber(-this.read.qx),
+                                              this.getFixedNumber(-this.read.qz),
+                                              this.getFixedNumber(this.read.qw));
 
-        // .normalize()
-        // .inverse();
+        console.log(quaternion)
 
-        const a = new THREE.Euler();
-        a.setFromQuaternion(quaternion, 'YXZ');
-        let quaternionFromEuler = new THREE.Quaternion();
-        // quaternionFromEuler.setFromEuler(a);
-        // quaternion = quaternionFromEuler;
+        this.handleSession(quaternion);
 
-        // console.log(a.z * 180 / Math.PI)
-        // let quaternion = new THREE.Quaternion(-this.getFixedNumber(this.read.qx),
-        //     this.getFixedNumber(this.read.qy),
-        //     this.getFixedNumber(-this.read.qz),
-        //     this.getFixedNumber(this.read.qw))
-        // .conjugate();
-        // debugger;
-        // quaternion.slerp(constant, 0.1);
-
-        let filterOutThisQuaternion = this.handleSession(quaternion);
-
-        if (!filterOutThisQuaternion) {
-            if (this.sessionStatus === "session_in_progress") {
-                this.requestsToSend.push({
-                                             timestamp: Math.floor(Date.now() / 1000),
-                                             x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
-                                         });
-            } else {
-                if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus === "session_awaiting") {
-                    this.prevSessionStatus = "session_awaiting";
-                    const url = "/api/save_session";
-
-                    axios({method: 'post', url: url, data: this.requestsToSend}).then((res) => {
-                        this.requestsToSend = [];
-                    });
-                }
+        if (this.sessionStatus === "session_in_progress") {
+            this.requestsToSend.push({
+                                         timestamp: new Date(),
+                                         x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
+                                     });
+        } else {
+            if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus === "session_awaiting") {
+                let data = {
+                    creation_time: new Date(),
+                    x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
+                    status: this.sessionStatus
+                };
+                const url = "/api/save_session";
+                axios({method: 'post', url: url, data: this.requestsToSend});
+                this.requestsToSend = [];
             }
-
-            model.quaternion.slerp(quaternion, 0.1);
         }
+
+        const a = new THREE.Euler( );
+        a.setFromQuaternion(quaternion.normalize())
+        a.z = -a.z
+        model.setRotationFromEuler(a);
+        // model.quaternion.slerp(quaternion, 0.1);
 
         return model;
     }
 
     handleSession(quaternion) {
-        const slowCount = 75;
-        const fastCount = 25;
-        const fastAvgSize = 5;
-        const slowAvgSize = 15;
-        let currentAvgSize = fastAvgSize;
-        let currentSessionTypeCounter = fastCount;
-        let filterOutThisQuaternion = false;
-        if (this.sessionStatus === "session_in_progress") {
-            currentSessionTypeCounter = slowCount;
-            currentAvgSize = slowAvgSize;
-        }
-        if (this.sessionRefQuaternion === null) {
+        if (this.prevQuaternion === null) {
             this.prevQuaternion = quaternion;
-            this.sessionRefQuaternion = quaternion;
         } else {
-            // console.log(this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI)
-            if (this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI > 180) {
-                console.log("Anomaly detected - Filtering anomaly!!");
-                filterOutThisQuaternion = true;
-            }
-
-            if (!filterOutThisQuaternion) {
-                let arr = ["x", "y", "z", "w"];
-                this.countQuaternions++;
-                arr.forEach(x => this.sumQuaternions += Math.abs(this.sessionRefQuaternion[x] - quaternion[x]));
-
-                this.prevQuaternion = quaternion;
-            }
+            let arr = ["x", "y", "z", "w"];
+            this.countQuaternions++;
+            arr.forEach(x => this.sumQuaternions += Math.abs(this.prevQuaternion[x] - quaternion[x]));
         }
 
-        if (!filterOutThisQuaternion) {
-
-            if (this.countQuaternions === currentSessionTypeCounter) {
-                this.streamAvg.push(this.sumQuaternions);
-                // console.log(this.sumQuaternions)
-                // if ()
-                this.countQuaternions = 0;
-                this.sumQuaternions = 0;
-            }
-
-            if (this.streamAvg.length === currentAvgSize) {
-                let vectorAvgDistance = this.streamAvg.reduce((x, y) => x + y) / this.streamAvg.length;
-                this.prevSessionStatus = this.sessionStatus;
-                this.sessionStatus = vectorAvgDistance > 5.5 ? "session_in_progress" : "session_awaiting";
-                console.log(this.sessionStatus);
-
-                this.streamAvg = [];
-                this.sessionRefQuaternion = quaternion;
-            }
+        if (this.countQuaternions === 100) {
+            this.streamAvg.push(this.sumQuaternions);
+            // console.log(this.sumQuaternions)
+            // if ()
+            this.countQuaternions = 0;
+            this.sumQuaternions = 0;
         }
 
-        return filterOutThisQuaternion;
+        if (this.streamAvg.length === 10) {
+            let vectorAvgDistance = this.streamAvg.reduce((x, y) => x + y) / this.streamAvg.length;
+            this.prevSessionStatus = this.sessionStatus;
+            this.sessionStatus = vectorAvgDistance > 5.5 ? "session_in_progress" : "session_awaiting";
+            console.log(this.sessionStatus)
+
+            this.streamAvg = [];
+            this.prevQuaternion = quaternion;
+        }
     }
 }
 
@@ -405,19 +364,9 @@ export class PlayGround {
         // })
 
         camera = new THREE.PerspectiveCamera(70, 2, 1, 1000);
-        camera.position.z = -75;
-        camera.lookAt(0,0,0)
-        camera.rotation.order = 'YXZ';
-        // camera.rotation.z = Math.PI;
-        // camera.setRotationFromQuaternion(new THREE.Quaternion(1,2,3,4))
-        // let controls = new OrbitControls(camera, renderer.domElement);
-        // controls.enableDamping = true;   //damping
-        // controls.dampingFactor = 0.25;   //damping inertia
-        // controls.enableZoom = true;      //Zooming
-        // controls.maxPolarAngle = Math.PI / 2;
-        // controls.enableRotate = true;
-        //
-        // controls.update();
+        camera.position.z = 75;
+        let controls = new OrbitControls(camera, renderer.domElement);
+        controls.update();
 
         // if (model) {
         //   cube.add(model)
@@ -426,7 +375,7 @@ export class PlayGround {
         scene.add(light);
 
         // renderer.render(scene, camera)
-        return {scene: scene, renderer: renderer, camera: camera};
+        return {scene: scene, renderer: renderer, camera: camera, controls: controls};
     }
 
     getRealWorldVertices(threeDObject) {
@@ -482,12 +431,11 @@ export class PlayGround {
         let scene = this.playGroundElements.scene;
         let camera = this.playGroundElements.camera;
         let model = this.model;
-        // camera.rotation.z += 1
+
         this.resizeCanvasToDisplaySize(camera, renderer);
 
         if (this.isSet === false && scene.getObjectByName('hand')) {
             this.model = scene.getObjectByName('hand');
-            // this.model.setRotationFromQuaternion(new THREE.Quaternion(0, 0, 0, 1));
             console.log(model);
             this.isSet = true;
         }
@@ -529,7 +477,7 @@ export class PlayGround {
             // Utils.STATS.radians_to_degrees(bombModel.rotation.y) + ' z in deg' +
             // Utils.STATS.radians_to_degrees(bombModel.rotation.z))
 
-            // this.playGroundElements.controls.update();
+            this.playGroundElements.controls.update();
         }
 
         renderer.render(scene, camera);
