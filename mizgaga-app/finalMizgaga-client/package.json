@@ -28,7 +28,7 @@
     "react-splitter-layout": "^4.0.0",
     "reconnecting-websocket": "4.4.0",
     "s3-client": "^4.4.2",
-    "three": "latest",
+    "three": "0.117.1",
     "three-dat.gui": "^1.0.2",
     "three-obj-loader-es6-module": "^1.0.1",
     "three-orbitcontrols": "^2.102.1",

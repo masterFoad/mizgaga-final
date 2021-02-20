@@ -105,7 +105,7 @@ export class ModelRotator {
                                               this.getFixedNumber(-this.read.qz),
                                               this.getFixedNumber(this.read.qw));
 
-        console.log(quaternion)
+        // console.log(quaternion);
 
         this.handleSession(quaternion);
 
@@ -127,10 +127,10 @@ export class ModelRotator {
             }
         }
 
-        const a = new THREE.Euler( );
-        a.setFromQuaternion(quaternion.normalize())
-        a.z = -a.z
-        model.setRotationFromEuler(a);
+        const currentRotationEulerAngles = new THREE.Euler();
+        currentRotationEulerAngles.setFromQuaternion(quaternion.normalize());
+        currentRotationEulerAngles.z = -currentRotationEulerAngles.z;
+        model.setRotationFromEuler(currentRotationEulerAngles);
         // model.quaternion.slerp(quaternion, 0.1);
 
         return model;
@@ -157,7 +157,7 @@ export class ModelRotator {
             let vectorAvgDistance = this.streamAvg.reduce((x, y) => x + y) / this.streamAvg.length;
             this.prevSessionStatus = this.sessionStatus;
             this.sessionStatus = vectorAvgDistance > 5.5 ? "session_in_progress" : "session_awaiting";
-            console.log(this.sessionStatus)
+            console.log(this.sessionStatus);
 
             this.streamAvg = [];
             this.prevQuaternion = quaternion;
@@ -314,6 +314,8 @@ export class PlayGround {
                                             cube.geometry.uvsNeedUpdate = true;
                                             cube.add(child);
                                             cube.name = 'hand';
+
+                                            console.log(cube);
                                             scene.add(cube);
 
                                             // this.gui.addMaterial('mainModel', cube)
@@ -386,6 +388,20 @@ export class PlayGround {
             vector.applyMatrix4(threeDObject.matrixWorld);
             realWorldMap.push(vector);
         });
+        // if (threeDObject.isMesh) {
+        //
+        //     const position = threeDObject.geometry.attributes.position;
+        //     const vector = new THREE.Vector3();
+        //
+        //     for (let i = 0, l = position.count; i < l; i++) {
+        //
+        //         vector.fromBufferAttribute(position, i);
+        //         vector.applyMatrix4(threeDObject.matrixWorld);
+        //         console.log(vector);
+        //         realWorldMap.push(vector)
+        //     }
+        //
+        // }
         return realWorldMap;
     }
 
@@ -436,10 +452,11 @@ export class PlayGround {
 
         if (this.isSet === false && scene.getObjectByName('hand')) {
             this.model = scene.getObjectByName('hand');
-            console.log(model);
+            // console.log(model);
             this.isSet = true;
         }
         if (model) {
+            // console.log(model);
             const rw = this.getRealWorldVertices(model);
             // console.log(...rw)
             this.modelRotator.rotateModel(model);
