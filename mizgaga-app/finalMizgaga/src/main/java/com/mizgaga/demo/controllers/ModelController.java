@@ -47,6 +47,26 @@ public class ModelController {
     private static ConcurrentHashMap<String, SensorStatus> sensorStatus = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, String> sensorAddress = new ConcurrentHashMap<>();
 
+    @Value("${wifi.name}")
+    private String wifiName;
+
+    @Value("${wifi.password}")
+    private String wifiPassword;
+
+    @Scheduled(cron = "*/15 * * * * *")
+    public void automaticWifiConnector() {
+        try {
+            Utils.runFromCommandLine((output) -> {
+                System.out.println(output);
+
+            }, Utils::logInfo, 8, "node", "./finalMizgaga/src/main/resources/wifi-hunter/cli.js", wifiName, wifiPassword);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * if mac run this
