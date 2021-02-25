@@ -115,7 +115,7 @@ const cardInfo = {
 
 };
 
-const LOCK_TIME = 3;
+const LOCK_TIME = 5;
 const TIMEOUT_DURATION = 3;
 
 const language = {
