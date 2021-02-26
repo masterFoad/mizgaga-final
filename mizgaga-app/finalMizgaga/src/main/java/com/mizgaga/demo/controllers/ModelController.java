@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +45,7 @@ import com.sun.javafx.PlatformUtil;
 @EnableScheduling
 public class ModelController {
 
+    private static volatile String lastBroadcastIpAddress = "";
     private static ConcurrentHashMap<String, SensorStatus> sensorStatus = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, String> sensorAddress = new ConcurrentHashMap<>();
 
@@ -52,21 +54,6 @@ public class ModelController {
 
     @Value("${wifi.password}")
     private String wifiPassword;
-
-    @Scheduled(cron = "*/15 * * * * *")
-    public void automaticWifiConnector() {
-        try {
-            Utils.runFromCommandLine((output) -> {
-                System.out.println(output);
-
-            }, Utils::logInfo, 8, "node", "./finalMizgaga/src/main/resources/wifi-hunter/cli.js", wifiName, wifiPassword);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
 
     /**
      * if mac run this
@@ -222,13 +209,48 @@ public class ModelController {
         return sensorAddress.get(sensorMacAddress);
     }
 
+
+    @RequestMapping(value = "/brute-refresh", method = {RequestMethod.GET})
+    @ResponseBody
+    public void bruteForceRefresh() {
+        try {
+            bruteForceHuntSensorIp(lastBroadcastIpAddress);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    @RequestMapping(value = "/auto-wifi-connect", method = {RequestMethod.GET})
+    @ResponseBody
+    public String automaticWifiConnector() {
+        List<String> response = new ArrayList<>();
+        try {
+
+            Utils.runFromCommandLine((output) -> {
+                if (output.contains("network not found")) {
+                    response.add("error: network not found [" + wifiName + "]");
+                } else {
+                    response.add("success");
+                }
+            }, Utils::logInfo, 8, "node", "./finalMizgaga/src/main/resources/wifi-hunter/cli.js", wifiName, wifiPassword);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return response.size() > 0 ? response.get(0) : "error";
+    }
+
     @Scheduled(cron = "*/3 * * * * *")
     public void monitorSensorHeartbeat() throws Exception {
         logInfo("Getting current broadcast ip");
 
         Matcher matcher = getBroadcastIp(getBroadcastAddress);
         if (matcher.find()) {
-            pingBroadcast(matcher);
+            StringBuilder broadcastIp = pingBroadcast(matcher);
+            if (!broadcastIp.toString().equals("192.168.4.255") && !lastBroadcastIpAddress.equals(broadcastIp.toString())) {
+                lastBroadcastIpAddress = broadcastIp.toString();
+            }
+
             matcher = runARP(getSensorIp);
             if (matcher.find()) {
                 StringBuilder finalCmdOutput = validateDeviceConnection(sensorMacAddress, matcher);
@@ -287,13 +309,33 @@ public class ModelController {
         return matcher;
     }
 
-    private void pingBroadcast(Matcher matcher) throws IOException, InterruptedException {
+    private StringBuilder pingBroadcast(Matcher matcher) throws IOException, InterruptedException {
         StringBuilder cmdOutput;
         cmdOutput = new StringBuilder(matcher.group(1).trim());
 
         logInfo("Pinging broadcast - " + cmdOutput);
 
         Utils.runFromCommandLine(Utils::logInfo, Utils::logInfo, 1, "ping", cmdOutput.toString());
+
+        return cmdOutput;
+    }
+
+    private void bruteForceHuntSensorIp(String broadcastAddress) {
+        StringBuilder cmdOutput;
+        cmdOutput = new StringBuilder(broadcastAddress);
+
+        String[] ipParts = cmdOutput.toString().trim().split("\\.");
+
+        System.out.println("Brute Forcing network discovery: for Broadcast: " + cmdOutput);
+        Arrays.stream(Utils.getAllPossibleAddresses(ipParts))
+                .parallel()
+                .forEach((ip) -> {
+                    String url = "http://" + ip + "/index.html";
+                    String out = Utils.webGet(url);
+                    if (out.equals("Success!")) {
+                        System.out.println("Found Sensor on Network - we are good to go");
+                    }
+                });
     }
 
     private Matcher getBroadcastIp(Pattern getBroadcastAddress) throws IOException, InterruptedException {

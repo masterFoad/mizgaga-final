@@ -1,11 +1,25 @@
 package com.mizgaga.demo.common;
 
+import sun.net.www.http.HttpClient;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+import com.sun.deploy.net.HttpResponse;
 
 public class Utils {
 
@@ -54,5 +68,38 @@ public class Utils {
 
     public static void logInfo(String x) {
         System.out.println(x);
+    }
+
+    public static String webGet(String url) {
+        StringBuilder sb = new StringBuilder("");
+        int timeout = 500;
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(timeout)
+                .setConnectionRequestTimeout(timeout)
+                .setSocketTimeout(timeout).build();
+        try (CloseableHttpClient httpclient = HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
+            HttpGet request = new HttpGet(url);
+
+            CloseableHttpResponse execute = httpclient.execute(request);
+
+            readFromInputStream(execute.getEntity().getContent(), sb, -1);
+
+            sb.append("Success!");
+            System.out.println(sb.toString());
+        } catch (Exception ignored) {
+            sb.append("Failed");
+        }
+
+        return sb.toString();
+    }
+
+    public static String[] getAllPossibleAddresses(String[] ipParts) {
+        int limit = Integer.parseInt(ipParts[3]);
+        String[] allAddresses = new String[limit];
+        for (int i = 0; i < limit; i++) {
+            allAddresses[i] = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + "." + i;
+        }
+
+        return allAddresses;
     }
 }

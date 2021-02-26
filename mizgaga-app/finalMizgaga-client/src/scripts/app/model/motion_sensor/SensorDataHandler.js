@@ -188,6 +188,7 @@ export class SensorDataHandler {
     }
 
     dispatchRotationEvent(window, packetAxisData, action, defaultVal) {
+        // console.log(packetAxisData)
         eventHandlerInstance.dispatchEvent(action, () => packetAxisData);
     }
 

@@ -10,6 +10,15 @@ import {
     PuffLoader,
     RingLoader
 } from "react-spinners";
+import CardHeader from "@material-ui/core/CardHeader";
+import CardActions from "@material-ui/core/CardActions";
+import Button from "@material-ui/core/Button";
+import VolumeUpIcon from "@material-ui/icons/VolumeUp";
+import VolumeOffRoundedIcon from "@material-ui/icons/VolumeOffRounded";
+import Card from "@material-ui/core/Card";
+import RefreshIcon from '@material-ui/icons/Refresh';
+import SettingsInputAntennaIcon from '@material-ui/icons/SettingsInputAntenna';
+import Paper from "@material-ui/core/Paper";
 
 const override = css`
   position: fixed;
@@ -36,7 +45,9 @@ export default class App extends React.Component {
             connectionReady: false,
             sensor: null,
             currentFace: 0,
-            isSettingMpu: false
+            isSettingMpu: false,
+            isBruteRefreshOn: false,
+            isAutoConnectOn: false
         };
 
         let PlayGround = null;
@@ -133,6 +144,46 @@ export default class App extends React.Component {
                         color={"#123abc"}
                         loading={this.state.sensorIp === ''}
                     />
+                    <Card style={{
+                        position: "fixed",
+                        top: '30%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
+                    }}>
+                        <Paper>
+                            <CardHeader title={"Wifi Network Options"}>
+                            </CardHeader>
+                            <CardActions>
+                                <Button fullWidth={true} size="medium" disabled={this.state.isBruteRefreshOn} onClick={() => {
+                                    fetch(
+                                        serverUrl + 'api/brute-refresh');
+                                    this.setState({isBruteRefreshOn: true});
+                                    setTimeout(() => this.setState({ isBruteRefreshOn: false }), 1000 * 60);
+                                }}>
+                                    <RefreshIcon fontSize={"large"}></RefreshIcon>
+                                    Full Refresh
+                                </Button>
+                                <Button fullWidth={true} size="medium" onClick={() => {
+                                    fetch(
+                                        serverUrl + 'api/auto-wifi-connect').then(res => {
+                                           return res.text();
+                                    }).then((text) => {
+                                        if (text.includes("network not found") || text.includes("error")) {
+                                            alert(text)
+                                        } else {
+                                            alert("success! - now please click to brute force refresh!")
+                                        }
+                                    });
+                                    this.setState({isAutoConnectOn: true});
+                                    setTimeout(() => this.setState({ isAutoConnectOn: false }), 1000 * 20);
+                                }}>
+                                    <SettingsInputAntennaIcon fontSize={"large"}></SettingsInputAntennaIcon>
+                                    Connect
+                                </Button>
+                            </CardActions>
+                        </Paper>
+
+                    </Card>
                     <h4 style={{
                         position: "fixed",
                         top: '55%',
