@@ -9,6 +9,13 @@ import CardHeader from "@material-ui/core/CardHeader";
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import VolumeOffRoundedIcon from '@material-ui/icons/VolumeOffRounded';
 
+let faces = {
+    top: [8],
+    bottom: [11, 10],
+    front: [3, 4, 2],
+    back: [6, 5, 9]
+};
+
 const cardInfo = {
     "top": [{
         text: "Top:\n" +
@@ -211,25 +218,27 @@ class ModelData extends React.Component {
     }
 
     getInfoByFace = (face) => {
-        if (face === 8 || face === 1) {
+
+        if (faces.top.includes(face)) {
             return "top";
-        } else if (face === 11 || face === 10) {
+        } else if (faces.bottom.includes(face)) {
             return "bottom";
-        } else if (face === 6 || face === 3) {
+        } else if (faces.front.includes(face)) {
             return "front";
-        } else if (face === 5) {
+        } else if (faces.back.includes(face)) {
             return "back";
         }
     };
 
     getLockInfo = (face) => {
-        if (face === 8 || face === 1) {
+
+        if (faces.top.includes(face)) {
             return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get top side info";
-        } else if (face === 11 || face === 10) {
+        } else if (faces.bottom.includes(face)) {
             return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get bottom side info";
-        } else if (face === 6 || face === 3) {
+        } else if (faces.front.includes(face)) {
             return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get front side info";
-        } else if (face === 5) {
+        } else if (faces.back.includes(face)) {
             return "Focus for " + this.state.timeToLock + "/" + LOCK_TIME + " seconds to get back side info";
         }
     };
@@ -260,13 +269,13 @@ class ModelData extends React.Component {
     };
 
     getCurrentFaceInformation = (face, lang) => {
-        if (face === 8 || face === 1) {
+        if (faces.top.includes(face)) {
             return this.getCardByCurrentFace("top", lang);
-        } else if (face === 11 || face === 10) {
+        } else if (faces.bottom.includes(face)) {
             return this.getCardByCurrentFace("bottom", lang);
-        } else if (face === 6 || face === 3) {
+        } else if (faces.front.includes(face)) {
             return this.getCardByCurrentFace("front", lang);
-        } else if (face === 5) {
+        } else if (faces.back.includes(face)) {
             return this.getCardByCurrentFace("back", lang);
         }
     };

@@ -15,7 +15,8 @@ export class ModelRotator {
         // this.alpha = 2 * Math.PI / (2 * Math.PI + this.rotation_dt)
         // this.acc_dt = 1 - this.alpha
         // this.const = this.alpha
-
+        this.is_anomaly_filter_active = true
+        this.anomaly_angle = 180
         this.countRotations = 0;
         this.prevRatio = [];
         this.sessionStatus = "session_awaiting";
@@ -81,8 +82,9 @@ export class ModelRotator {
     };
 
     getFixedNumber(x) {
-        // return Number(num.toFixed(5));
-        return Math.floor(x * 1000) / 1000;
+        // return Number(x.toFixed(5));
+        // return Math.floor(x * 1000) / 1000;
+        return x;
     };
 
     percentageChangeCalculator(v1, v2) {
@@ -108,42 +110,62 @@ export class ModelRotator {
         // console.log(quaternion);
 
         this.handleSession(quaternion);
+        let filterOutThisQuaternion = false;
 
-        if (this.sessionStatus === "session_in_progress") {
-            this.requestsToSend.push({
-                                         timestamp: new Date(),
-                                         x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
-                                     });
-        } else {
-            if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus === "session_awaiting") {
-                let data = {
-                    creation_time: new Date(),
-                    x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
-                    status: this.sessionStatus
-                };
-                const url = "/api/save_session";
-                axios({method: 'post', url: url, data: this.requestsToSend});
-                this.requestsToSend = [];
+        if (this.is_anomaly_filter_active) {
+            if (this.sessionRefQuaternion === null && quaternion) {
+                this.prevQuaternion = quaternion;
+                this.sessionRefQuaternion = quaternion;
+            } else {
+                // console.log(this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI)
+                if (this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI > this.anomaly_angle) {
+                    console.log("Anomaly detected - Filtering anomaly!!");
+                    filterOutThisQuaternion = true;
+                }
+
+                if (!filterOutThisQuaternion) {
+                    this.prevQuaternion = quaternion;
+                }
             }
         }
 
-        // const currentRotationEulerAngles = new THREE.Euler();
-        // currentRotationEulerAngles.setFromQuaternion(quaternion.normalize(),"XYZ");
-        // currentRotationEulerAngles.x = currentRotationEulerAngles.x + Math.PI;
-        // currentRotationEulerAngles.y = currentRotationEulerAngles.y + Math.PI;
-        // currentRotationEulerAngles.z = currentRotationEulerAngles.z + Math.PI;
-        // if ((currentRotationEulerAngles.x - 113) < 0) {
-        //     currentRotationEulerAngles.z = -currentRotationEulerAngles.z; // reverse problematic angle
-        // }
-        // else {
-        //     currentRotationEulerAngles.y = -currentRotationEulerAngles.y; // reverse problematic angle
-        // }
-        // console.log(
-        //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" + currentRotationEulerAngles.y * 180
-        //     / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 / Math.PI + " - \n");
-        // model.setRotationFromEuler(currentRotationEulerAngles);
-        // quaternion.setFromEuler(currentRotationEulerAngles);
-        model.quaternion.slerp(quaternion, 0.1);
+        if (filterOutThisQuaternion === false) {
+            if (this.sessionStatus === "session_in_progress") {
+                this.requestsToSend.push({
+                                             timestamp: new Date(),
+                                             x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
+                                         });
+            } else {
+                if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus === "session_awaiting") {
+                    let data = {
+                        creation_time: new Date(),
+                        x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
+                        status: this.sessionStatus
+                    };
+                    const url = "/api/save_session";
+                    axios({method: 'post', url: url, data: this.requestsToSend});
+                    this.requestsToSend = [];
+                }
+            }
+
+            // const currentRotationEulerAngles = new THREE.Euler();
+            // currentRotationEulerAngles.setFromQuaternion(quaternion.normalize(),"XYZ");
+            // currentRotationEulerAngles.x = currentRotationEulerAngles.x + Math.PI;
+            // currentRotationEulerAngles.y = currentRotationEulerAngles.y + Math.PI;
+            // currentRotationEulerAngles.z = currentRotationEulerAngles.z + Math.PI;
+            // if ((currentRotationEulerAngles.x - 113) < 0) {
+            //     currentRotationEulerAngles.z = -currentRotationEulerAngles.z; // reverse problematic angle
+            // }
+            // else {
+            //     currentRotationEulerAngles.y = -currentRotationEulerAngles.y; // reverse problematic angle
+            // }
+            // console.log(
+            //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" + currentRotationEulerAngles.y * 180
+            //     / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 / Math.PI + " - \n");
+            // model.setRotationFromEuler(currentRotationEulerAngles);
+            // quaternion.setFromEuler(currentRotationEulerAngles);
+            model.quaternion.slerp(quaternion, 0.1);
+        }
 
         return model;
     }
@@ -478,9 +500,9 @@ export class PlayGround {
             const temp = faceVertices.map((v) => v.distance);
             const sd = Utils.STATS.standardDeviation(temp);
             // console.log(sd)
-            const currentFace = this.findFaceForVertices(model, faceVertices) || 1;
+            const currentFace = this.findFaceForVertices(model, faceVertices) ;
             // console.log('rotx' + model.rotation.x + ' ' + model.rotation.y + ' ' + model.rotation.z)
-            if (Math.abs(sd) < 40) {
+            if (Math.abs(sd) < 70) {
                 // console.log('prev:' + this.prevFace)
                 if (currentFace && currentFace !== this.prevFace) {
                     console.log('Lock on face num: ' + currentFace);
