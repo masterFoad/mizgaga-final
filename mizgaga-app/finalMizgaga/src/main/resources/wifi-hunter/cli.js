@@ -3,7 +3,7 @@ const [, , ...args] = process.argv;
 // console.log(`Connecting this pc and the sensor to the same network: ${args[0]}`);
 var wifi = require('node-wifi');
 var fetch = require('node-fetch');
-
+// revision
 // Initialize wifi module
 // Absolutely necessary even to set interface to null
 wifi.init({
