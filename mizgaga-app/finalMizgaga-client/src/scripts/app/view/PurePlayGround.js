@@ -16,7 +16,7 @@ export class ModelRotator {
         // this.acc_dt = 1 - this.alpha
         // this.const = this.alpha
         this.is_anomaly_filter_active = true
-        this.anomaly_angle = 180
+        this.anomaly_angle = 130;
         this.countRotations = 0;
         this.prevRatio = [];
         this.sessionStatus = "session_awaiting";
@@ -166,6 +166,8 @@ export class ModelRotator {
             // quaternion.setFromEuler(currentRotationEulerAngles);
             model.quaternion.slerp(quaternion, 0.1);
         }
+
+
 
         return model;
     }

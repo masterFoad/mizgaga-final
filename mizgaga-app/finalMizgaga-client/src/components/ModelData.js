@@ -13,7 +13,7 @@ let faces = {
     top: [8],
     bottom: [11, 10],
     front: [3, 4, 2],
-    back: [6, 5, 9]
+    back: [1, 6, 5, 9]
 };
 
 const cardInfo = {

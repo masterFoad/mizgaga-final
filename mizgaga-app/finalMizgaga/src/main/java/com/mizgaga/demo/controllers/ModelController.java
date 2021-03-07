@@ -55,18 +55,21 @@ public class ModelController {
     @Value("${wifi.password}")
     private String wifiPassword;
 
+    @Value("${path.to.wifi.hunter}")
+    private String pathToWifiHunter;
+
     /**
      * if mac run this
      */
-    Pattern getBroadcastAddress = Pattern.compile("broadcast (\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)..at.3c.71.bf.29.3f.c9");
+//    Pattern getBroadcastAddress = Pattern.compile("broadcast (\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
+//    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)..at.3c.71.bf.29.3f.c9");
 
 
     /**
      * if windows run this
      */
-    //    Pattern getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-    //    Pattern getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
+        Pattern getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
+        Pattern getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
 
     public static String sensorMacAddress = "3c-71-bf-29-3f-c9";
 
@@ -98,6 +101,32 @@ public class ModelController {
         return buffer.toByteArray();
     }
 
+//    @RequestMapping(value = "/set_configurations", method = RequestMethod.GET)
+//    public boolean setDbConfigurations(
+//            @RequestParam(name = "db_name", required = false) String dbName,
+//            @RequestParam(name = "username", required = false) String username,
+//            @RequestParam(name = "password", required = false) String password,
+//            HttpServletRequest request,
+//            HttpServletResponse response) {
+//        String connectionString = String.format("jdbc:mysql://localhost:3306/%s?user=%s&password=%s&useUnicode=true&characterEncoding=UTF-8&useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowPublicKeyRetrieval=true",
+//                dbName,
+//                username,
+//                password);
+//        boolean isSuccess = false;
+//        try (Connection conn = sqlManager.createConnection(connectionString, "mysql")) {
+//            try (Statement stm = conn.createStatement()) {
+//                stm.execute("select 1;");
+//                this.mysqlDataSource = connectionString;
+//                isSuccess = true;
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        return isSuccess;
+//    }
 
     @RequestMapping(value = "/save_session", method = RequestMethod.POST)
     public void saveSessionData(
@@ -226,13 +255,15 @@ public class ModelController {
         List<String> response = new ArrayList<>();
         try {
 
+
             Utils.runFromCommandLine((output) -> {
                 if (output.contains("network not found")) {
                     response.add("error: network not found [" + wifiName + "]");
                 } else {
                     response.add("success");
                 }
-            }, Utils::logInfo, 8, "node", "./finalMizgaga/src/main/resources/wifi-hunter/cli.js", wifiName, wifiPassword);
+            }, Utils::logInfo, 8, "node", pathToWifiHunter, wifiName, wifiPassword);
+
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
