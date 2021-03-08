@@ -5,12 +5,6 @@ import static com.mizgaga.demo.common.Utils.logInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -31,16 +25,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.mizgaga.demo.common.Utils;
-import com.mizgaga.demo.db.SqlManager;
 import com.mizgaga.demo.pojos.SessionDataVector;
-import com.sun.javafx.PlatformUtil;
 
 @CrossOrigin
 @Controller
@@ -61,6 +52,9 @@ public class ModelController {
     @Value("${path.to.wifi.hunter}")
     private String pathToWifiHunter;
 
+    @Value("${os.type.current}")
+    String currentPlatform;
+
     /**
      * if mac/linux run this
      */
@@ -69,11 +63,32 @@ public class ModelController {
     String cmdIp = "ifconfig";
 
     public ModelController() {
-        if (PlatformUtil.isWindows()) {
+//        if (currentPlatform.toLowerCase().trim().equals("windows")) {
+//            this.getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
+//            this.getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)(?=\\s+3c.71.bf.29.3f.c9)");
+//            this.cmdIp = "ipconfig";
+//        }
+    }
+
+    public Pattern getGetBroadcastAddress() {
+        if (currentPlatform.toLowerCase().trim().equals("windows")) {
             this.getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-            this.getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
+        }
+        return getBroadcastAddress;
+    }
+
+    public Pattern getGetSensorIp() {
+        if (currentPlatform.toLowerCase().trim().equals("windows")) {
+            this.getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)(?=\\s+3c.71.bf.29.3f.c9)");
+        }
+        return getSensorIp;
+    }
+
+    public String getCmdIp() {
+        if (currentPlatform.toLowerCase().trim().equals("windows")) {
             this.cmdIp = "ipconfig";
         }
+        return cmdIp;
     }
 
     /**
@@ -89,14 +104,8 @@ public class ModelController {
         DISCONNECTED
     }
 
-    @Value("${spring.datasource.url}")
-    public String mysqlDataSource;
-
     @Autowired
     ResourceLoader resourceLoader;
-
-    @Autowired
-    SqlManager sqlManager;
 
 
     private byte[] convertStreamToByteArray(InputStream is) throws IOException {
@@ -149,7 +158,7 @@ public class ModelController {
 
         new Thread(() -> {
             try {
-                Utils.writeToCsv(new Timestamp(new Date().getTime()).toString(), sessionDataVectors
+                Utils.writeToCsv(String.valueOf(new Date().getTime()), sessionDataVectors
                         .stream()
                         .map(vector -> vector.getDataAsStringArray())
                         .collect(Collectors.toList()));
@@ -213,48 +222,6 @@ public class ModelController {
         return convertStreamToByteArray(resourceLoader.getResource("classpath:testTex.jpg").getInputStream());
     }
 
-    @RequestMapping(value = "/face/{faceId}", method = {RequestMethod.GET})
-    @ResponseBody
-    public void addFace(
-            @PathVariable("faceId") int faceId
-    ) throws Exception {
-        try (Connection conn = sqlManager.createConnection(mysqlDataSource, "mysql")) {
-            try (PreparedStatement stm = conn.prepareStatement("insert into faces (face) values (" + faceId + ");", Statement.RETURN_GENERATED_KEYS)) {
-                int rs = stm.executeUpdate();
-                if (rs > 0) {
-                    System.out.println("Success");
-                } else {
-                    System.out.println("failed");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @RequestMapping(value = "/face", method = {RequestMethod.GET})
-    @ResponseBody
-    public int getCurrentFace() throws Exception {
-        try (Connection conn = sqlManager.createConnection(mysqlDataSource, "mysql")) {
-            try (PreparedStatement stm = conn.prepareStatement("select face from faces ORDER BY id DESC LIMIT 1;", Statement.RETURN_GENERATED_KEYS)) {
-                ResultSet rs = stm.executeQuery();
-                if (rs.next()) {
-                    return rs.getInt(1);
-                } else {
-                    System.out.println("failed");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return -1;
-    }
-
     @RequestMapping(value = "/get-sensor-address", method = {RequestMethod.GET})
     @ResponseBody
     public String getSensorAddress() {
@@ -298,14 +265,14 @@ public class ModelController {
     public void monitorSensorHeartbeat() throws Exception {
         logInfo("Getting current broadcast ip");
 
-        Matcher matcher = getBroadcastIp(getBroadcastAddress);
+        Matcher matcher = getBroadcastIp(getGetBroadcastAddress());
         if (matcher.find()) {
             StringBuilder broadcastIp = pingBroadcast(matcher);
             if (!broadcastIp.toString().equals("192.168.4.255") && !lastBroadcastIpAddress.equals(broadcastIp.toString())) {
                 lastBroadcastIpAddress = broadcastIp.toString();
             }
 
-            matcher = runARP(getSensorIp);
+            matcher = runARP(getGetSensorIp());
             if (matcher.find()) {
                 StringBuilder finalCmdOutput = validateDeviceConnection(sensorMacAddress, matcher);
             } else {
@@ -369,8 +336,11 @@ public class ModelController {
 
         logInfo("Pinging broadcast - " + cmdOutput);
 
-        Utils.runFromCommandLine(Utils::logInfo, Utils::logInfo, 1, "ping", cmdOutput.toString());
-
+        if (currentPlatform.trim().toLowerCase().equals("linux")) {
+            Utils.runFromCommandLine(Utils::logInfo, Utils::logInfo, 1, "ping", cmdOutput.toString(), "-b");
+        } else {
+            Utils.runFromCommandLine(Utils::logInfo, Utils::logInfo, 1, "ping", cmdOutput.toString());
+        }
         return cmdOutput;
     }
 
@@ -394,7 +364,7 @@ public class ModelController {
 
     private Matcher getBroadcastIp(Pattern getBroadcastAddress) throws IOException, InterruptedException {
         StringBuilder cmdOutput = new StringBuilder();
-        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, this.cmdIp);
+        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, getCmdIp());
         return getBroadcastAddress.matcher(cmdOutput);
     }
 

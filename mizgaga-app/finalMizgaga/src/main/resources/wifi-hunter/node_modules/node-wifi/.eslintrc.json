@@ -1,8 +1,0 @@
-{
-  "parser": "babel-eslint",
-  "extends": ["prettier", "eslint:recommended", "plugin:node/recommended"],
-  "plugins": ["jest"],
-  "env": {
-    "jest/globals": true
-  }
-}

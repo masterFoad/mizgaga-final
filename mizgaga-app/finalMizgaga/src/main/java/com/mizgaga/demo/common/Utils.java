@@ -92,9 +92,8 @@ public class Utils {
     }
 
     public static String[] getAllPossibleAddresses(String[] ipParts) {
-        int limit = Integer.parseInt(ipParts[3]);
-        String[] allAddresses = new String[limit];
-        for (int i = 0; i < limit; i++) {
+        String[] allAddresses = new String[255];
+        for (int i = 0; i < 255; i++) {
             allAddresses[i] = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + "." + i;
         }
 
@@ -117,7 +116,7 @@ public class Utils {
     }
 
     public static void writeToCsv(String csvFileName, List<String[]> dataLines) throws IOException {
-        csvFileName = String.format("./session_output/session_record_%s.csv", csvFileName);
+        csvFileName = String.format(System.getProperty("user.dir") + "/session_output/session_record_%s.csv", csvFileName);
         File csvOutputFile = new File(csvFileName);
         if (csvOutputFile.exists() && !csvOutputFile.isDirectory()) {
             try (PrintWriter pw = new PrintWriter(new FileOutputStream(new File(csvFileName), true))) {

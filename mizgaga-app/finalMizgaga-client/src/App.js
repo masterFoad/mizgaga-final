@@ -47,11 +47,14 @@ export default class App extends React.Component {
             currentFace: 0,
             isSettingMpu: false,
             isBruteRefreshOn: false,
-            isAutoConnectOn: false
+            isAutoConnectOn: false,
+            writeToCurrentSession: ""
         };
 
         let PlayGround = null;
     }
+
+
 
     setSensorState = (sensor, isReady) => {
         this.setState({sensor: sensor, connectionReady: isReady});
