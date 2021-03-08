@@ -8,6 +8,8 @@ import {getOBJ, getTextures, getMTL} from '../../common/LoadersUtil';
 import {serverUrl} from "../../../common/server-const";
 import axios from 'axios';
 
+let currentFaceClassLocal = -1;
+
 export class ModelRotator {
     constructor(sensorAddress) {
         // Very Good
@@ -15,8 +17,8 @@ export class ModelRotator {
         // this.alpha = 2 * Math.PI / (2 * Math.PI + this.rotation_dt)
         // this.acc_dt = 1 - this.alpha
         // this.const = this.alpha
-        this.is_anomaly_filter_active = true
-        this.anomaly_angle = 130;
+        this.is_anomaly_filter_active = false;
+        this.anomaly_angle = 180;
         this.countRotations = 0;
         this.prevRatio = [];
         this.sessionStatus = "session_awaiting";
@@ -109,6 +111,7 @@ export class ModelRotator {
 
         // console.log(quaternion);
 
+        console.log(currentFaceClassLocal);
         this.handleSession(quaternion);
         let filterOutThisQuaternion = false;
 
@@ -133,7 +136,7 @@ export class ModelRotator {
             if (this.sessionStatus === "session_in_progress") {
                 this.requestsToSend.push({
                                              timestamp: new Date(),
-                                             x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w,
+                                             x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w, face: currentFaceClassLocal ? currentFaceClassLocal : 'none'
                                          });
             } else {
                 if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus === "session_awaiting") {
@@ -144,7 +147,9 @@ export class ModelRotator {
                     };
                     const url = "/api/save_session";
                     axios({method: 'post', url: url, data: this.requestsToSend});
-                    this.requestsToSend = [];
+                    // this.requestsToSend = [];
+                    console.log(this.requestsToSend);
+                    this.prevSessionStatus = "session_awaiting";
                 }
             }
 
@@ -160,14 +165,12 @@ export class ModelRotator {
             //     currentRotationEulerAngles.y = -currentRotationEulerAngles.y; // reverse problematic angle
             // }
             // console.log(
-            //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" + currentRotationEulerAngles.y * 180
-            //     / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 / Math.PI + " - \n");
+            //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" + currentRotationEulerAngles.y
+            // * 180 / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 / Math.PI + " - \n");
             // model.setRotationFromEuler(currentRotationEulerAngles);
             // quaternion.setFromEuler(currentRotationEulerAngles);
             model.quaternion.slerp(quaternion, 0.1);
         }
-
-
 
         return model;
     }
@@ -502,7 +505,10 @@ export class PlayGround {
             const temp = faceVertices.map((v) => v.distance);
             const sd = Utils.STATS.standardDeviation(temp);
             // console.log(sd)
-            const currentFace = this.findFaceForVertices(model, faceVertices) ;
+            const currentFace = this.findFaceForVertices(model, faceVertices);
+            if (currentFace) {
+                currentFaceClassLocal = currentFace;
+            }
             // console.log('rotx' + model.rotation.x + ' ' + model.rotation.y + ' ' + model.rotation.z)
             if (Math.abs(sd) < 70) {
                 // console.log('prev:' + this.prevFace)

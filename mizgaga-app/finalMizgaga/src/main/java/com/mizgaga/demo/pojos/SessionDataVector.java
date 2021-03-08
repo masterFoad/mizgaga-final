@@ -1,13 +1,16 @@
 package com.mizgaga.demo.pojos;
 
-import java.sql.Timestamp;
-
 public class SessionDataVector {
     String timestamp;
     double x;
     double y;
     double z;
     double w;
+    String face;
+
+    public String[] getDataAsStringArray() {
+        return new String[]{timestamp, String.valueOf(x), String.valueOf(y), String.valueOf(z), String.valueOf(w), face};
+    }
 
     public String getTimestamp() {
         return timestamp;
@@ -47,6 +50,14 @@ public class SessionDataVector {
 
     public void setW(double w) {
         this.w = w;
+    }
+
+    public String getFace() {
+        return face;
+    }
+
+    public void setFace(String face) {
+        this.face = face;
     }
 
     @Override

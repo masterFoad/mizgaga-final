@@ -10,13 +10,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -59,17 +62,24 @@ public class ModelController {
     private String pathToWifiHunter;
 
     /**
-     * if mac run this
+     * if mac/linux run this
      */
-//    Pattern getBroadcastAddress = Pattern.compile("broadcast (\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-//    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)..at.3c.71.bf.29.3f.c9");
+    Pattern getBroadcastAddress = Pattern.compile("broadcast (\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
+    Pattern getSensorIp = Pattern.compile("(\\b\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}\\b)..at.3c.71.bf.29.3f.c9");
+    String cmdIp = "ifconfig";
 
+    public ModelController() {
+        if (PlatformUtil.isWindows()) {
+            this.getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
+            this.getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
+            this.cmdIp = "ipconfig";
+        }
+    }
 
     /**
      * if windows run this
      */
-        Pattern getBroadcastAddress = Pattern.compile(" Default Gateway.*(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)");
-        Pattern getSensorIp = Pattern.compile("(\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)\\s*" + "at.3c.71.bf.29.3f.c9");
+
 
     public static String sensorMacAddress = "3c-71-bf-29-3f-c9";
 
@@ -135,29 +145,42 @@ public class ModelController {
             HttpServletResponse response) {
         System.out.println("Adding session data - size :" + sessionDataVectors.size());
         int sessionId = ThreadLocalRandom.current().nextInt(10000);
-        try (Connection conn = sqlManager.createConnection(mysqlDataSource, "mysql")) {
-            try (Statement stm = conn.createStatement()) {
-                sessionDataVectors.forEach(sessionDataVector -> {
-                    try {
-                        String queryToAdd = String
-                                .format("insert into session_vectors " +
-                                                "value (null, CURRENT_TIMESTAMP(), %s,%s, %s, %s ,%s, %d);"
-                                        , sessionDataVector.getTimestamp(), sessionDataVector.getX(), sessionDataVector.getY(), sessionDataVector.getZ(), sessionDataVector.getW(), sessionId);
 
 
-                        stm.addBatch(queryToAdd);
-                    } catch (SQLException throwables) {
-                        throwables.printStackTrace();
-                    }
-                });
-
-                stm.executeLargeBatch();
-            } catch (Exception e) {
+        new Thread(() -> {
+            try {
+                Utils.writeToCsv(new Timestamp(new Date().getTime()).toString(), sessionDataVectors
+                        .stream()
+                        .map(vector -> vector.getDataAsStringArray())
+                        .collect(Collectors.toList()));
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        }).start();
+
+//        try (Connection conn = sqlManager.createConnection(mysqlDataSource, "mysql")) {
+//            try (Statement stm = conn.createStatement()) {
+//                sessionDataVectors.forEach(sessionDataVector -> {
+//                    try {
+//                        String queryToAdd = String
+//                                .format("insert into session_vectors " +
+//                                                "value (null, CURRENT_TIMESTAMP(), %s,%s, %s, %s ,%s, %d);"
+//                                        , sessionDataVector.getTimestamp(), sessionDataVector.getX(), sessionDataVector.getY(), sessionDataVector.getZ(), sessionDataVector.getW(), sessionId);
+//
+//
+//                        stm.addBatch(queryToAdd);
+//                    } catch (SQLException throwables) {
+//                        throwables.printStackTrace();
+//                    }
+//                });
+//
+//                stm.executeLargeBatch();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     @RequestMapping(value = "/handOfTheKing.mtl", method = {RequestMethod.GET})
@@ -371,11 +394,7 @@ public class ModelController {
 
     private Matcher getBroadcastIp(Pattern getBroadcastAddress) throws IOException, InterruptedException {
         StringBuilder cmdOutput = new StringBuilder();
-        String cmd = "ifconfig";
-        if (PlatformUtil.isWindows()) {
-            cmd = "ipconfig";
-        }
-        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, cmd);
+        Utils.runFromCommandLine(cmdOutput::append, Utils::logInfo, -1, this.cmdIp);
         return getBroadcastAddress.matcher(cmdOutput);
     }
 

@@ -8,6 +8,9 @@ import Typography from '@material-ui/core/Typography';
 import CardHeader from "@material-ui/core/CardHeader";
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import VolumeOffRoundedIcon from '@material-ui/icons/VolumeOffRounded';
+import Tab from "@material-ui/core/Tab";
+import Tabs from "@material-ui/core/Tabs";
+import Paper from "@material-ui/core/Paper";
 
 let faces = {
     top: [8],

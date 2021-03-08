@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ModelData from "./ModelData";
 import styles from './SplitScreen-css.css';
+import MainTabs from "./MainTabs";
 
 //  let pg = new PlayGround('ws://192.168.43.173:81/', {DOM: document.getElementById('app')})
 // eslint-disable-next-line react/prop-types
@@ -45,7 +46,7 @@ class Splitscreen extends Component {
                     </div>
                 </div>
                 <div id="editor" style={{ visibility: this.props.connectionReady ? 'visible' : 'hidden'}}>
-                    <ModelData currentFace={this.props.currentFace}/>
+                    <MainTabs currentFace={this.props.currentFace}/>
                 </div>
             </div>
         );

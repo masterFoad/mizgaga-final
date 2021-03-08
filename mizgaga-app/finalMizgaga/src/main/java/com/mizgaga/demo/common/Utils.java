@@ -1,11 +1,17 @@
 package com.mizgaga.demo.common;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -93,5 +99,38 @@ public class Utils {
         }
 
         return allAddresses;
+    }
+
+    public static String convertToCSV(String[] data) {
+        return Stream.of(data)
+                .map(Utils::escapeSpecialCharacters)
+                .collect(Collectors.joining(",")) + "\n";
+    }
+
+    public static String escapeSpecialCharacters(String data) {
+        String escapedData = data.replaceAll("\\R", " ");
+        if (data.contains(",") || data.contains("\"") || data.contains("'")) {
+            data = data.replace("\"", "\"\"");
+            escapedData = "\"" + data + "\"";
+        }
+        return escapedData;
+    }
+
+    public static void writeToCsv(String csvFileName, List<String[]> dataLines) throws IOException {
+        csvFileName = String.format("./session_output/session_record_%s.csv", csvFileName);
+        File csvOutputFile = new File(csvFileName);
+        if (csvOutputFile.exists() && !csvOutputFile.isDirectory()) {
+            try (PrintWriter pw = new PrintWriter(new FileOutputStream(new File(csvFileName), true))) {
+                dataLines.stream()
+                        .map(Utils::convertToCSV)
+                        .forEach(pw::append);
+            }
+        } else {
+            try (PrintWriter pw = new PrintWriter(csvFileName)) {
+                dataLines.stream()
+                        .map(Utils::convertToCSV)
+                        .forEach(pw::append);
+            }
+        }
     }
 }
