@@ -63,7 +63,8 @@ export class SensorDataHandler {
         }
         if (filteredString) {
             let tmp = JSON.parse(filteredString);
-            if (tmp === "" || JSON.stringify(filteredString) === "{\"qw\":0,\"qx\":0,\"qy\":0,\"qz\":0}") {
+
+            if (tmp === "" || JSON.stringify(filteredString).includes("\"qw\":0,\"qx\":0,\"qy\":0,\"qz\":0")) {
                 this.toResetEventCount++;
                 if (this.toResetEventCount === 400) { // every 25 ms -> meaning we will get 400 after 10 seconds.
                     this.toResetEventCount = 0;
@@ -79,6 +80,11 @@ export class SensorDataHandler {
                 this.dispatchRotationEvent(0, tmp.qw, 'qw' + this.sensorAddress, 0);
                 this.dispatchRotationEvent(0, tmp.qx, 'qx' + this.sensorAddress, 0);
                 this.dispatchRotationEvent(0, tmp.qy, 'qy' + this.sensorAddress, 0);
+                this.dispatchRotationEvent(0, tmp.qz, 'qz' + this.sensorAddress, 0);
+
+                this.dispatchRotationEvent(0, tmp.angle_x, 'angle_x' + this.sensorAddress, 0);
+                this.dispatchRotationEvent(0, tmp.angle_y, 'angle_y' + this.sensorAddress, 0);
+                this.dispatchRotationEvent(0, tmp.angle_z, 'angle_z' + this.sensorAddress, 0);
                 this.dispatchRotationEvent(0, tmp.qz, 'qz' + this.sensorAddress, 0);
             }
         }
@@ -101,6 +107,10 @@ export class SensorDataHandler {
         eventHandlerInstance.registerEvent('qx' + this.sensorAddress);
         eventHandlerInstance.registerEvent('qy' + this.sensorAddress);
         eventHandlerInstance.registerEvent('qz' + this.sensorAddress);
+
+        eventHandlerInstance.registerEvent('angle_x' + this.sensorAddress);
+        eventHandlerInstance.registerEvent('angle_y' + this.sensorAddress);
+        eventHandlerInstance.registerEvent('angle_z' + this.sensorAddress);
     }
 
     resetEvents() {

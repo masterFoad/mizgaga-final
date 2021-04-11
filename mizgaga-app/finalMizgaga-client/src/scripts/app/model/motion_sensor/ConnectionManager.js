@@ -10,7 +10,7 @@ const typeOptions = {
     reconnectionDelayGrowFactor: 1.3,
     minUptime: 5000,
     connectionTimeout: 4000,
-    maxRetries: Infinity,
+    maxRetries: 10,
     maxEnqueuedMessages: 1000,
     startClosed: false,
     debug: false
