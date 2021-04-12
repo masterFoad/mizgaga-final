@@ -17,8 +17,6 @@ export class ModelRotator {
         // this.alpha = 2 * Math.PI / (2 * Math.PI + this.rotation_dt)
         // this.acc_dt = 1 - this.alpha
         // this.const = this.alpha
-        this.axisX = new THREE.Vector3(1, 0, 0); // CHANGED
-        this.axisZ = new THREE.Vector3(0, 0, 1);
         this.is_anomaly_filter_active = true;
         this.anomaly_angle = 180;
         this.countRotations = 0;
@@ -74,9 +72,10 @@ export class ModelRotator {
         this.sensorAddress = sensorListener;
     };
 
-    getFixedNumber(value) {
-        return value.toFixed(4);
+    getFixedNumber(x) {
+        // return Number(x.toFixed(5));
         // return Math.floor(x * 1000) / 1000;
+        return x;
     };
 
     percentageChangeCalculator(v1, v2) {
@@ -92,63 +91,152 @@ export class ModelRotator {
     }
 
     rotateModel(model) {
+        // if (true) {
+        //     model.rotation.x = this.read.anglex * Math.PI / 180;
+        //     model.rotation.y = this.read.angley * Math.PI / 180;
+        //     model.rotation.z = this.read.anglez * Math.PI / 180;
+        //     return model;
+        // }
+        // model.rotation.order = 'YXZ';
 
         let quaternion;
-        quaternion = new THREE.Quaternion(this.getFixedNumber(this.read.qx),
-                                          this.getFixedNumber(this.read.qy),
-                                          this.getFixedNumber(this.read.qz),
-                                          this.getFixedNumber(this.read.qw));
+        if (this.offset) {
+            let quaternionOffset =
+                new THREE.Quaternion(this.offset['x'], this.offset['y'], this.offset['z'],
+                                     this.offset['w']);
+            quaternion = new THREE.Quaternion(this.getFixedNumber(this.read.qx),
+                                              this.getFixedNumber(this.read.qy),
+                                              this.getFixedNumber(this.read.qz),
+                                              this.getFixedNumber(this.read.qw));
+            // quaternion = quaternion.multiply(quaternionOffset.inverse().normalize());
+            // quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -1.5708 / 2 * 2 / 4, 0)));
+            quaternion = new THREE.Quaternion(quaternion.y, quaternion.x, quaternion.z, quaternion.w);
 
-        // rotate quaternion by offset
-        quaternion = quaternion
-            // .multiply(new THREE.Quaternion()
-            //               .setFromEuler(new THREE.Euler(Math.PI/2, 0,0))
-            //               .normalize())
-            .normalize();
+            this.count++;
+            if (this.count === 10) {
+                this.canContinue = true;
+                this.count = 0;
+            } else {
+                this.canContinue = false;
+            }
 
-        const currentRotationEulerAngles = new THREE.Euler();
-        currentRotationEulerAngles.setFromQuaternion(quaternion);
-        // model.rotation.y = this.getFixedNumber(currentRotationEulerAngles.z);
-        // model.rotation.x = -this.getFixedNumber(currentRotationEulerAngles.x);
-        // model.rotation.z = this.getFixedNumber(currentRotationEulerAngles.y);
-        model.quaternion.slerp(quaternion, 1);
+            if (!this.canContinue) {
+                return model;
+            }
 
-        this.handleSession(quaternion);
-        let filterOutThisQuaternion = false;
+            // console.log(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
-        // if (this.is_anomaly_filter_active) {
-        //     if (this.sessionRefQuaternion === null && quaternion) {
-        //         this.prevQuaternion = quaternion;
-        //         this.sessionRefQuaternion = quaternion;
-        //     } else {
-        //         // console.log(this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI)
-        //         if (this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI > this.anomaly_angle) {
-        //             console.log("Anomaly detected - Filtering anomaly!!");
-        //             filterOutThisQuaternion = true;
-        //         }
-        //
-        //         if (!filterOutThisQuaternion) {
-        //             this.prevQuaternion = quaternion;
-        //         }
-        //     }
-        // }
+        } else {
+            quaternion = new THREE.Quaternion(this.getFixedNumber(this.read.qx),
+                                              this.getFixedNumber(this.read.qy),
+                                              this.getFixedNumber(this.read.qz),
+                                              this.getFixedNumber(this.read.qw));
 
-        if (filterOutThisQuaternion === false) {
-            // if (this.sessionStatus === "session_in_progress") {
-            //     this.requestsToSend.push({
-            //                                  timestamp: new Date(),
-            //                                  x: quaternion.x,
-            //                                  y: quaternion.y,
-            //                                  z: quaternion.z,
-            //                                  w: quaternion.w,
-            //                                  face: currentFaceClassLocal ? currentFaceClassLocal : 'none'
-            //                              });
-            // } else {
-            //     if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus ===
-            // "session_awaiting") { let data = { creation_time: new Date(), x: quaternion.x, y: quaternion.y, z:
-            // quaternion.z, w: quaternion.w, status: this.sessionStatus }; const url = "/api/save_session";
-            // axios({method: 'post', url: url, data: this.requestsToSend}); // this.requestsToSend = [];
-            // console.log(this.requestsToSend); this.prevSessionStatus = "session_awaiting"; } }
+        }
+
+        // console.log(quaternion);
+        if (this.offsetCalibration && this.offsetCalibration.length < 200) {
+            this.offsetCalibration.push(quaternion);
+            if (this.offsetCalibration.length === 200) {
+                console.log(this.offsetCalibration);
+                const xOffset = this.offsetCalibration.map(q => q.x).reduce((ax, bx) => (ax + bx), 0) / 200;
+                const yOffset = this.offsetCalibration.map(q => q.y).reduce((ay, by) => (ay + by), 0) / 200;
+                const zOffset = this.offsetCalibration.map(q => q.z).reduce((az, bz) => (az + bz), 0) / 200;
+                const wOffset = this.offsetCalibration.map(q => q.w).reduce((aw, bw) => (aw + bw), 0) / 200;
+                this.offset = {
+                    x: xOffset,
+                    y: yOffset,
+                    z: zOffset,
+                    w: wOffset
+                };
+                console.log(this.offset);
+                let test =
+                    new THREE.Quaternion(this.offset['x'], this.offset['y'], this.offset['z'],
+                                         this.offset['w']);
+                quaternion = new THREE.Quaternion(this.getFixedNumber(this.read.qx),
+                                                  this.getFixedNumber(this.read.qy),
+                                                  this.getFixedNumber(this.read.qz),
+                                                  this.getFixedNumber(this.read.qw));
+
+                quaternion = quaternion.multiply(test);
+                console.log(quaternion);
+                this.offsetCalibration = null;
+            }
+        }
+
+        if (this.offset) {
+            // console.log(currentFaceClassLocal);
+            this.handleSession(quaternion);
+            let filterOutThisQuaternion = false;
+
+            if (this.is_anomaly_filter_active) {
+                if (this.sessionRefQuaternion === null && quaternion) {
+                    this.prevQuaternion = quaternion;
+                    this.sessionRefQuaternion = quaternion;
+                } else {
+                    // console.log(this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI)
+                    if (this.prevQuaternion.angleTo(quaternion) * 180 / Math.PI > this.anomaly_angle) {
+                        console.log("Anomaly detected - Filtering anomaly!!");
+                        filterOutThisQuaternion = true;
+                    }
+
+                    if (!filterOutThisQuaternion) {
+                        this.prevQuaternion = quaternion;
+                    }
+                }
+            }
+
+            if (filterOutThisQuaternion === false) {
+                // if (this.sessionStatus === "session_in_progress") {
+                //     this.requestsToSend.push({
+                //                                  timestamp: new Date(),
+                //                                  x: quaternion.x,
+                //                                  y: quaternion.y,
+                //                                  z: quaternion.z,
+                //                                  w: quaternion.w,
+                //                                  face: currentFaceClassLocal ? currentFaceClassLocal : 'none'
+                //                              });
+                // } else {
+                //     if (this.prevSessionStatus === "session_in_progress" && this.sessionStatus ===
+                // "session_awaiting") { let data = { creation_time: new Date(), x: quaternion.x, y: quaternion.y, z:
+                // quaternion.z, w: quaternion.w, status: this.sessionStatus }; const url = "/api/save_session";
+                // axios({method: 'post', url: url, data: this.requestsToSend}); // this.requestsToSend = [];
+                // console.log(this.requestsToSend); this.prevSessionStatus = "session_awaiting"; } }
+
+                const currentRotationEulerAngles = new THREE.Euler();
+                currentRotationEulerAngles.setFromQuaternion(quaternion.normalize());
+                // console.log(currentRotationEulerAngles.z);
+                // currentRotationEulerAngles.x = currentRotationEulerAngles.x + Math.PI;
+                // currentRotationEulerAngles.y = currentRotationEulerAngles.y + Math.PI;
+                // currentRotationEulerAngles.z = currentRotationEulerAngles.z + Math.PI;
+                // if ((currentRotationEulerAngles.x - 113) < 0) {
+                //     currentRotationEulerAngles.z = -currentRotationEulerAngles.z; // reverse problematic angle
+                // }
+                // else {
+                //     currentRotationEulerAngles.y = -currentRotationEulerAngles.y; // reverse problematic angle
+                // }
+                // console.log(
+                //     "x:" + currentRotationEulerAngles.x * 180 / Math.PI + " - \t" + "y:" +
+                // currentRotationEulerAngles.y * 180 / Math.PI + " - \t" + "z:" + currentRotationEulerAngles.z * 180 /
+                // Math.PI + " - \n"); model.setRotationFromEuler(currentRotationEulerAngles);
+
+                const offsetInEuler = new THREE.Euler();
+                offsetInEuler.setFromQuaternion(new THREE.Quaternion(this.offset['x'], this.offset['y'], this.offset['z'],
+                                                                     this.offset['w']));
+
+                // console.log('Math.abs(offsetInEuler.y) '+Math.abs(offsetInEuler.y)+' + Math.abs(currentRotationEulerAngles.y) '+Math.abs(currentRotationEulerAngles.y)+'> Math.PI'+Math.PI);
+                // if (Math.abs(offsetInEuler.y) + Math.abs(currentRotationEulerAngles.y)> Math.PI) {
+                //     model.rotation.y = currentRotationEulerAngles.y;
+                // } else {
+                //     model.rotation.y = -currentRotationEulerAngles.y;
+                // }
+                // quaternion.setFromEuler(currentRotationEulerAngles);
+                // model.rotation.x = currentRotationEulerAngles.x;
+
+                // model.rotation.z = currentRotationEulerAngles.z;
+                // model.quaternion.slerp(quaternion, 0.1);
+                // model.setRotationFromQuaternion(quaternion);
+            }
         }
 
         return model;
@@ -295,9 +383,9 @@ export class PlayGround {
                                             child.geometry.computeVertexNormals();
                                             child.geometry.scale(1, 1, 1);
                                             child.geometry.uvsNeedUpdate = true;
-                                            // child.rotation.x = Math.PI;
-                                            child.rotation.y = 0;
-                                            child.rotation.z = 0;
+                                            child.rotation.x = -Math.PI / 2.5;
+                                            // child.rotation.y = 0;
+                                            // child.rotation.z = 0;
                                             // object.name = 'hand'
                                             // child.scale(10,10,10)
                                             // console.log(child)
@@ -310,51 +398,45 @@ export class PlayGround {
                                             //   50,
                                             //   0)
 
-                                            let parentGeo = new THREE.BoxGeometry(50, 50, 50);
-                                            let cube = new THREE.Mesh(
-                                                parentGeo,
-                                                parentMaterial);
-                                            //
+                                            let parentGeo = new THREE.BoxGeometry(100, 100, 100);
+                                            // let cube = new THREE.Mesh(
+                                            //     parentGeo,
+                                            //     parentMaterial);
+
                                             cube = new THREE.Mesh(parentGeo, parentMaterial.clone());
-                                            //
-                                            //
-                                            let clone = child.material.clone();
-                                            child = new THREE.Mesh(child.geometry, clone);
-                                            // child.rotation.x = Math.PI / 2;
-                                            // child.rotation.y = Math.PI/2;
-                                            // child.rotation.z = Math.PI/2;
-                                            //
+                                            // cube.material.visible = false;
+
+                                            child = new THREE.Mesh(child.geometry, child.material.clone());
+
                                             // cube.visible = false;
-                                            cube.material.transparent = true;
-                                            // // cube.material.wireframe = true;
+                                            // cube.material.transparent = true
+                                            // cube.material.wireframe = true;
                                             // cube.position.x = -Math.PI;
                                             // cube.position.y = Math.PI / 2;
-                                            // cube.position.z = 80;
-                                            // cube.geometry.computeFaceNormals();
-                                            // cube.geometry.computeVertexNormals();
-                                            // cube.geometry.scale(1, 1, 1);
-                                            // cube.geometry.uvsNeedUpdate = true;
-
-                                            // var cubeMaterial = new THREE.MeshPhongMaterial({
-                                            //                                                    ambient: 0xffabe4,
-                                            //                                                    color: 0xace3ff,
-                                            //                                                    specular: 0xffabe4,
-                                            //                                                    shininess: 0,
-                                            //                                                    perPixel: true,
-                                            //                                                    metal: true
-                                            //                                                });
-                                            // var cube = new THREE.Mesh(new THREE.BoxGeometry(50, 50, 50),
-                                            //                           new THREE.MeshNormalMaterial());
-                                            cube.material.visible = false;
+                                            // cube.position.z = Math.PI / 6;
+                                            cube.geometry.computeFaceNormals();
+                                            cube.geometry.computeVertexNormals();
+                                            cube.geometry.scale(1, 1, 1);
+                                            // cube.geometry.faces[0].color.setHex('#FF0000');
+                                            cube.geometry.uvsNeedUpdate = true;
                                             cube.add(child);
                                             cube.name = 'hand';
-                                            cube.useQuaternion = true;
-                                            console.log(cube);
-                                            // cube.rotation.order = 'ZYX';
-                                            scene.add(cube);
 
-                                            // Euler {_x: 1.001257647593464, _y: -0.7426420834512112, _z:
-                                            // -2.55498658775335, _order: "ZYX"}
+
+
+                                            var cubeMaterial = new THREE.MeshPhongMaterial({
+                                                                                               ambient: 0xffabe4,
+                                                                                               color: 0xace3ff,
+                                                                                               specular: 0xffabe4,
+                                                                                               shininess: 0,
+                                                                                               perPixel: true,
+                                                                                               metal: true
+                                                                                           });
+                                            var cube = new THREE.Mesh(new THREE.BoxGeometry(50, 50, 50),
+                                                                      new THREE.MeshNormalMaterial());
+
+                                            console.log(cube);
+                                            scene.add(cube);
 
                                             // this.gui.addMaterial('mainModel', cube)
                                         }
@@ -416,23 +498,11 @@ export class PlayGround {
         //   renderer.setSize(ww, wh)
         // })
 
-        camera = new THREE.PerspectiveCamera(70, 3, 1, 1500);
-        // camera.position.x=10
+        camera = new THREE.PerspectiveCamera(70, 2, 1, 1000);
+        camera.position.z = 120;
+        let controls = new OrbitControls(camera, renderer.domElement);
+        controls.update();
 
-        camera.rotation.order = "XYZ";
-        camera.updateProjectionMatrix();
-        // camera.position.y= 90;
-        camera.position.x = 180;
-        // camera.position.z = -90;
-        camera.lookAt(0, 0, 0);
-        // let controls = new OrbitControls(camera, renderer.domElement);
-        // controls.update();
-        camera.rotation.x = Math.PI / 2;
-        // camera.updateProjectionMatrix();
-        // camera.lookAt(0, 0, 0);
-        // camera.lookAt(0, 0, 0);
-        // camera.rotation.y = 0.035035;
-        // camera.rotation.z =2.9;
         // if (model) {
         //   cube.add(model)
         // }
@@ -440,10 +510,7 @@ export class PlayGround {
         scene.add(light);
 
         // renderer.render(scene, camera)
-        return {
-            scene: scene, renderer: renderer, camera: camera,
-            // controls: controls
-        };
+        return {scene: scene, renderer: renderer, camera: camera, controls: controls};
     }
 
     getRealWorldVertices(threeDObject) {
@@ -527,8 +594,6 @@ export class PlayGround {
         let camera = this.playGroundElements.camera;
         let model = this.model;
 
-        console.log(camera.rotation);
-
         this.resizeCanvasToDisplaySize(camera, renderer);
 
         if (this.isSet === false && scene.getObjectByName('hand')) {
@@ -537,33 +602,19 @@ export class PlayGround {
             this.isSet = true;
         }
         if (model) {
-            // const a = new THREE.Euler( 0,0,  Math.PI / 2, 'ZYX' );
-
-            // camera.position.x  -=1;
-            // camera.position.z += 1;
-            // camera.lookAt(0,0,0)
-            // model.rotation.z = 3.14/2
-            // model.rotation.y = 3.14/4
-            // model.rotation.y += 0.01
-            // model.setRotationFromEuler(a)
             // console.log(model);
             const rw = this.getRealWorldVertices(model);
             // console.log(...rw)
             this.modelRotator.rotateModel(model);
             // this.model.rotation.x += 0.01
             const facesHash = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-            const faceCalc1 = this.calculateCurrentFace(rw, [150, 0, -20]);
-            const faceCalc2 = this.calculateCurrentFace(rw, [150, 0, 20]);
-            const faceCalc3 = this.calculateCurrentFace(rw, [150, 20, 0]);
-            const faceCalc4 = this.calculateCurrentFace(rw, [150, -20, 0]);
-            const faceCalc5 = this.calculateCurrentFace(rw, [150, 14, 14]);
-            const faceCalc6 = this.calculateCurrentFace(rw, [150, -14, 14]);
-            const faceCalc7 = this.calculateCurrentFace(rw, [150, 14, -14]);
-            const faceCalc8 = this.calculateCurrentFace(rw, [150, -14, -14]);
-            const faceCalc9 = this.calculateCurrentFace(rw, [150, 0, 0]);
+            const faceCalc1 = this.calculateCurrentFace(rw, [-10, 0, 150]);
+            const faceCalc2 = this.calculateCurrentFace(rw, [10, 0, 150]);
+            const faceCalc3 = this.calculateCurrentFace(rw, [0, 10, 150]);
+            const faceCalc4 = this.calculateCurrentFace(rw, [0, -10, 150]);
+            const faceCalc5 = this.calculateCurrentFace(rw, [0, 0, 150]);
 
-            const facesSelection = [faceCalc1, faceCalc2, faceCalc3, faceCalc4, faceCalc5, faceCalc6, faceCalc7,
-                                    faceCalc8, faceCalc9];
+            const facesSelection = [faceCalc1, faceCalc2, faceCalc3, faceCalc4, faceCalc5];
             // console.log(facesSelection);
             facesSelection.filter(f => f > 0).forEach(f => facesHash[f]++);
             const currentFace = facesHash.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
@@ -591,7 +642,7 @@ export class PlayGround {
             // Utils.STATS.radians_to_degrees(bombModel.rotation.y) + ' z in deg' +
             // Utils.STATS.radians_to_degrees(bombModel.rotation.z))
 
-            // this.playGroundElements.controls.update();
+            this.playGroundElements.controls.update();
         }
 
         renderer.render(scene, camera);

@@ -13,10 +13,10 @@ import Tabs from "@material-ui/core/Tabs";
 import Paper from "@material-ui/core/Paper";
 
 let faces = {
-    top: [8],
+    top: [8, 9],
     bottom: [11, 10],
-    front: [3, 4, 2],
-    back: [1, 6, 5, 9]
+    front: [7, 6, 3, 2, 1],
+    back: [4, 5, 0]
 };
 
 const cardInfo = {
